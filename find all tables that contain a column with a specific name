@@ -1,0 +1,22 @@
+1. Using INFORMATION_SCHEMA.COLUMNS
+
+DECLARE @columnName NVARCHAR(255) = 'your_column_name'  -- Replace with the column name you're looking for
+
+SELECT TABLE_SCHEMA, TABLE_NAME
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE COLUMN_NAME = @columnName
+ORDER BY TABLE_SCHEMA, TABLE_NAME;
+Using sys.columns and sys.tables
+
+2. Using sys.columns and sys.tables
+
+DECLARE @columnName NVARCHAR(255) = 'your_column_name'  -- Replace with the column name you're looking for
+
+SELECT s.name AS SchemaName,
+       t.name AS TableName
+FROM sys.columns c
+JOIN sys.tables t ON c.object_id = t.object_id
+JOIN sys.schemas s ON t.schema_id = s.schema_id
+WHERE c.name = @columnName
+ORDER BY s.name, t.name;
+
