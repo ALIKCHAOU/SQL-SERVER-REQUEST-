@@ -1,0 +1,47 @@
+-- Clean up
+DROP TABLE #TablesContainingData
+
+DECLARE @searchValue NVARCHAR(255) = 'RUE DES AMIRAUX ' -- Replace with the specific data you are looking for
+
+DECLARE @schemaName NVARCHAR(255)
+DECLARE @tableName NVARCHAR(255)
+DECLARE @columnName NVARCHAR(255)
+DECLARE @sql NVARCHAR(MAX)
+
+-- Temporary table to store the schema and table names containing the search value
+CREATE TABLE #TablesContainingData (SchemaName NVARCHAR(255), TableName NVARCHAR(255))
+
+-- Cursor to go through each table and column in the database
+DECLARE table_cursor CURSOR FOR
+SELECT s.name AS SchemaName, t.name AS TableName, c.name AS ColumnName
+FROM sys.schemas s
+JOIN sys.tables t ON s.schema_id = t.schema_id
+JOIN sys.columns c ON t.object_id = c.object_id
+JOIN sys.types ty ON c.user_type_id = ty.user_type_id
+WHERE ty.name IN ('char', 'nchar', 'varchar', 'nvarchar', 'text', 'ntext') -- Only text-based columns
+
+OPEN table_cursor
+FETCH NEXT FROM table_cursor INTO @schemaName, @tableName, @columnName
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    -- Build dynamic SQL to check if the search value exists in the current column of the current schema.table
+    SET @sql = 'IF EXISTS (SELECT 1 FROM ' + QUOTENAME(@schemaName) + '.' + QUOTENAME(@tableName) + 
+               ' WHERE ' + QUOTENAME(@columnName) + ' = @searchValue) ' +
+               'INSERT INTO #TablesContainingData (SchemaName, TableName) VALUES (''' + @schemaName + ''', ''' + @tableName + ''')'
+
+    -- Execute dynamic SQL with parameters
+    EXEC sp_executesql @sql, N'@searchValue NVARCHAR(255)', @searchValue
+
+    FETCH NEXT FROM table_cursor INTO @schemaName, @tableName, @columnName
+END
+
+CLOSE table_cursor
+DEALLOCATE table_cursor
+
+-- Select all tables that contain the search value, including their schema names
+SELECT DISTINCT  TableName FROM #TablesContainingData
+
+-- Clean up
+DROP TABLE #TablesContainingData
+
