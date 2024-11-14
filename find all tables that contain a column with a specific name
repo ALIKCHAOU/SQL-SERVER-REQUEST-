@@ -6,7 +6,7 @@ SELECT TABLE_SCHEMA, TABLE_NAME
 FROM INFORMATION_SCHEMA.COLUMNS
 WHERE COLUMN_NAME = @columnName
 ORDER BY TABLE_SCHEMA, TABLE_NAME;
-Using sys.columns and sys.tables
+
 
 2. Using sys.columns and sys.tables
 
