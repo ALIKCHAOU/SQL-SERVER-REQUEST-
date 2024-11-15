@@ -1,3 +1,5 @@
+String Value 
+
 -- Clean up
 DROP TABLE #TablesContainingData
 
@@ -43,5 +45,54 @@ DEALLOCATE table_cursor
 SELECT DISTINCT  TableName FROM #TablesContainingData
 
 -- Clean up
+DROP TABLE #TablesContainingData
+
+Int Value 
+
+
+
+
+DECLARE @searchValue INT = 531480 -- Remplacez 123 par la valeur numérique que vous cherchez
+
+DECLARE @schemaName NVARCHAR(255)
+DECLARE @tableName NVARCHAR(255)
+DECLARE @columnName NVARCHAR(255)
+DECLARE @sql NVARCHAR(MAX)
+
+-- Table temporaire pour stocker les noms de schéma et de tables contenant la valeur recherchée
+CREATE TABLE #TablesContainingData (SchemaName NVARCHAR(255), TableName NVARCHAR(255))
+
+-- Curseur pour parcourir chaque table et colonne de la base de données
+DECLARE table_cursor CURSOR FOR
+SELECT s.name AS SchemaName, t.name AS TableName, c.name AS ColumnName
+FROM sys.schemas s
+JOIN sys.tables t ON s.schema_id = t.schema_id
+JOIN sys.columns c ON t.object_id = c.object_id
+JOIN sys.types ty ON c.user_type_id = ty.user_type_id
+WHERE ty.name IN ('int', 'bigint', 'smallint', 'tinyint') -- Seules les colonnes numériques
+
+OPEN table_cursor
+FETCH NEXT FROM table_cursor INTO @schemaName, @tableName, @columnName
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    -- Construction de SQL dynamique pour vérifier si la valeur de recherche existe dans la colonne actuelle du schéma.table actuel
+    SET @sql = 'IF EXISTS (SELECT 1 FROM ' + QUOTENAME(@schemaName) + '.' + QUOTENAME(@tableName) + 
+               ' WHERE ' + QUOTENAME(@columnName) + ' = @searchValue) ' +
+               'INSERT INTO #TablesContainingData (SchemaName, TableName) VALUES (''' + @schemaName + ''', ''' + @tableName + ''')'
+
+    -- Exécute le SQL dynamique avec les paramètres
+    EXEC sp_executesql @sql, N'@searchValue INT', @searchValue
+
+    FETCH NEXT FROM table_cursor INTO @schemaName, @tableName, @columnName
+END
+
+CLOSE table_cursor
+DEALLOCATE table_cursor
+
+-- Sélection de toutes les tables contenant la valeur de recherche, y compris leurs noms de schéma
+SELECT DISTINCT TableName FROM #TablesContainingData
+
+-- Nettoyage
 DROP TABLE #TablesContainingData
 
